@@ -6,6 +6,7 @@ TASK_GROUPS = {
         "LegalQuAD",
         "mbpp",
         "PyTorch1024",
-        "TAT-QA"
+        "TAT-QA",
+        "ConvFinQA"
     ]
 }
