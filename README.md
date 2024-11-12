@@ -34,6 +34,7 @@ python main.py \
     --bf16 \
     --do_retrieve \
     --model_type voyage_api \
+    --batch_size 16 \
     --model_name voyage-3 \
     --api_key <your_api_key> \
     --task_name TEST_TASKS \
@@ -48,6 +49,7 @@ python main.py \
     --bf16 \
     --do_retrieve \
     --model_type openai \
+    --batch_size 16 \
     --model_name text-embedding-3-large \
     --api_key <your_api_key> \
     --task_name TEST_TASKS \
