@@ -1,0 +1,9 @@
+numpy
+torch
+lightning>=2.1.1
+termcolor
+beir
+sentence_transformers==3.0.0
+openai
+tiktoken
+voyageai

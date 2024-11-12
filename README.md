@@ -58,7 +58,7 @@ python main.py \
 
 Explanation of the arguments:
 - `--data_path` base path where the datasets are stored.
-- `--task_name` can be a list of tasks or task groups, seperated by `,`; task groups are defined [here](dataset/tasks.py);
+- `--task_name` can be a list of tasks or task groups, seperated by `,`; task groups are defined [here](voyage_evaluation/dataset/tasks.py);
 if not specified, load all directories/files under `data_path` (but not recursively).
 - `--overwrite` when this flag is set, exising results in the output path will be ignored and overwritten; 
 otherwise, the code will load exising results and will not run the model again.
