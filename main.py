@@ -6,9 +6,9 @@ import argparse
 import pytorch_lightning as pl
 from pytorch_lightning.strategies.ddp import DDPStrategy
 
-from voyage_evaluation.task import run_retrieve_task, run_rerank_task, run_cluster_task, run_sts_task
+from voyage_evaluation.task import run_retrieve_task
 from voyage_evaluation.dataset import get_task_list
-from voyage_evaluation.module import get_encoder, get_retriever, get_reranker
+from voyage_evaluation.module import get_encoder, get_retriever
 
 
 logger = logging.getLogger(__name__)
@@ -25,17 +25,9 @@ def get_args():
         "--bf16", action="store_true", help="Use bf16 precision.")
     parser.add_argument(
         "--do_retrieve", action="store_true", help="Run retrieval.")
-    parser.add_argument(
-        "--do_rerank", action="store_true", help="Run reranking.")
-    parser.add_argument(
-        "--do_cluster", action="store_true", help="Run clustering.")
-    parser.add_argument(
-        "--do_sts", action="store_true", help="Run semantic textual similarity (STS).")
-    parser.add_argument(
-        "--do_pair_classification", action="store_true", help="Run pair classification.")
     # Model
     parser.add_argument(
-        "--model_type", type=str, default="llama", help="Model type options: `llama`, `sentence-transformers`.")
+        "--model_type", type=str, default="openai", help="Model type options: `openai`, `voyage_api`.")
     parser.add_argument(
         "--model_name", type=str, default=None, help="Model name or path.")
     parser.add_argument(
@@ -49,12 +41,6 @@ def get_args():
         help="Embeddings will be stored in memory if the amount is below this threshold.")
     parser.add_argument(
         "--api_key", type=str, default=None, help="API key.")
-    parser.add_argument(
-        "--aws_access_key_id", type=str, default=None, help="AWS Access Key.")
-    parser.add_argument(
-        "--aws_secret_access_key", type=str, default=None, help="AWS Secret Access Key.")
-    parser.add_argument(
-        "--max_chunks", type=int, default=4, help="Max number of chunks, only used in Cohere reranker.")
     parser.add_argument(
         "--embd_type", type=str, default="float", help="Embedding type. Options: float, int8, uint8, binary, ubinary.")
     parser.add_argument(
@@ -88,16 +74,6 @@ def get_args():
         "--group_by_query", action="store_true", help="Whether to group the candidates by query in a batch.")
     parser.add_argument(
         "--split_candidate", action="store_true", help="Whether to split the candidate docs by max_length.")
-    parser.add_argument(
-        "--chunk_type", type=str, default="char", help="Type of chunking method.")
-    parser.add_argument(
-        "--chunk_size", type=int, default=4000, help="Maximum chunk size (in characters).")
-    parser.add_argument(
-        "--chunk_overlap", type=int, default=200, help="Overlap between chunks (in characters).")
-    parser.add_argument(
-        "--merge_corpus_file", type=str, default=None, help="Documents to merge with original ones.")
-    parser.add_argument(
-        "--no_concat_doc", action="store_true", default=True, help="If true, do not concat the docs but add them to corpus.")
     # Output
     parser.add_argument(
         "--save_path", type=str, default=None, required=True, help="Path to save the output.")
@@ -156,8 +132,6 @@ def main():
             load_embds=args.load_embds,
             embd_type=args.embd_type,
             api_key=args.api_key,
-            aws_access_key_id=args.aws_access_key_id,
-            aws_secret_access_key=args.aws_secret_access_key,
         )
         retriever = get_retriever(
             args.model_type,
@@ -166,61 +140,12 @@ def main():
             data_type=args.data_type,
             similarity=args.similarity,
             save_prediction=args.save_prediction,
-            rescore=args.rescore,  # for binary quantization
-            bm25_tokenizer=args.bm25_tokenizer,  # for bm25
         )
         eval_results = {
             task: run_retrieve_task(task, trainer, encoder, retriever, args)
             for task in task_list
         }
         metric = "ndcg_at_10"
-
-    if args.do_rerank:
-        reranker = get_reranker(
-            args.model_type,
-            args.model_name,
-            group_by_query=args.group_by_query,
-            save_intermediate=args.save_intermediate,
-            load_intermediate=args.load_intermediate,
-            save_prediction=args.save_prediction,
-            api_key=args.api_key,  # for cohere, voyage
-            max_chunks=args.max_chunks,  # for cohere
-        )
-        eval_results = {
-            task: run_rerank_task(task, trainer, reranker, args)
-            for task in task_list
-        }
-        metric = "ndcg_at_10"
-
-    if args.do_cluster:
-        encoder = get_encoder(
-            args.model_type,
-            args.model_name,
-            save_embds=args.save_embds,
-            load_embds=args.load_embds,
-            embd_type=args.embd_type,
-            api_key=args.api_key,
-        )
-        eval_results = {
-            task: run_cluster_task(task, trainer, encoder, args)
-            for task in task_list
-        }
-        metric = "v_measure"
-
-    if args.do_sts or args.do_pair_classification:
-        encoder = get_encoder(
-            args.model_type,
-            args.model_name,
-            save_embds=args.save_embds,
-            load_embds=args.load_embds,
-            embd_type=args.embd_type,
-            api_key=args.api_key,
-        )
-        eval_results = {
-            task: run_sts_task(task, trainer, encoder, args)
-            for task in task_list
-        }
-        metric = "cosine_pearson" if args.do_sts else "mAP"
 
     if args.eval and trainer.is_global_zero:
         trainer.print("=" * 40)
